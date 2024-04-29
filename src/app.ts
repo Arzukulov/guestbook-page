@@ -1,12 +1,11 @@
 import * as WebSocket from "ws";
 import * as http from "http";
-import * as express from "express"
-import * as cors from 'cors'
+import * as express from "express";
+import * as cors from 'cors';
 import * as bodyParser from 'body-parser';
 import { createConnection, getConnection } from "typeorm-plus";
-
-import { Posts } from './models/Posts'
-import { Users } from './models/Users'
+import { Posts } from './models/Posts';
+import { Users } from './models/Users';
 
 const app = express();
 app.use(cors());
@@ -16,8 +15,9 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const guestBookData: any[] = [];
+const responseMessage = { message: "" };
 
-async function fetchData() {
+(async () => {
   try {
     const connection = await createConnection({
       type: "mysql",
@@ -32,25 +32,16 @@ async function fetchData() {
     const postRepository = connection.getRepository(Posts);
     const allPosts = await postRepository.find();
 
-    for (let i = 0; i < allPosts.length; i++)
+    for (let i = 0; i < allPosts.length; i++) {
       guestBookData.push({
         name: allPosts[i].Name,
-        description: allPosts[0].Description
-      })
-
+        description: allPosts[i].Description
+      });
+    }
   } catch (error) {
     console.log("Ошибка при получении данных из базы данных:", error);
   }
-}
-
-fetchData();
-
-
-wss.on('connection', function connection(ws: WebSocket) {
-  ws.on('message', function incoming(message: WebSocket.RawData) {
-    console.log('received: %s', message);
-  });
-});
+})();
 
 app.get("/api/posts", (req: express.Request, res: express.Response) => {
   res.json(guestBookData);
@@ -58,7 +49,7 @@ app.get("/api/posts", (req: express.Request, res: express.Response) => {
 
 app.post('/api/posts', async (req: express.Request, res: express.Response) => {
   const { name, description } = req.body;
-  if (!name || !description) { return res.status(400).json({ message: 'Отсутствует одно из обязательных полей!' }); }
+  if (!name || !description) { return res.status(400).json(responseMessage.message = 'Отсутствует одно из обязательных полей!'); }
 
   const post: Posts = new Posts();
   post.Name = name;
@@ -67,12 +58,12 @@ app.post('/api/posts', async (req: express.Request, res: express.Response) => {
   guestBookData.push({ name, description });
   const postRepository = getConnection().getRepository(Posts);
 
-  const savedPost = await postRepository.save(post);
+  await postRepository.save(post);
 
   wss.clients.forEach(client => {
     client.send(JSON.stringify(req.body));
   });
-  res.status(201).json({ message: 'Отзыв успешно сохранен!' });
+  res.status(201).json(responseMessage.message = 'Отзыв успешно сохранен!');
 });
 
 const port = process.env.PORT || 3000;
