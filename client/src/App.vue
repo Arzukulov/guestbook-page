@@ -16,7 +16,9 @@ import ReviewsItems from './components/ReviewsItems.vue';
 import Modal from './components/ModalWindow.vue';
 import axios from 'axios';
 
-const ws = new WebSocket('ws://188.134.68.113:3000');
+
+const host = '188.134.68.113:3000';
+const ws = new WebSocket('ws://'+host);
 export default {
   components: { AddItem, ReviewsItems, PageHeader, Modal },
   data() {
@@ -45,7 +47,7 @@ export default {
 
 
     try {
-      const response = await axios.get('http://188.134.68.113:3000/api/posts');
+      const response = await axios.get('http://'+host+'/api/posts');
 
       for (let i = 0; i < response.data.length; i++)
         addRow(response.data[i])
